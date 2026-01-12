@@ -44,6 +44,8 @@ This bundle collects those automatically so you don’t have to “hunt” acros
 
 3) Run it with `sudo` (recommended) so it can read logs:
 
+Note: don’t run it via `sh ./collect-incident.sh ...` (that uses `dash` on Ubuntu and will fail). Use `./collect-incident.sh ...` or `bash ./collect-incident.sh ...`.
+
 ### Option A: center time (recommended)
 
 Provide a “center” time when you noticed the outage, and a window before/after:
@@ -51,6 +53,8 @@ Provide a “center” time when you noticed the outage, and a window before/aft
 `sudo ./collect-incident.sh --center "2026-01-12 09:33:00 UTC" --before 30m --after 30m`
 
 This computes `--since` and `--until` automatically using UTC.
+
+`--before` / `--after` accept compact durations like `30m`, `2h`, `7d` (or strings like `30 minutes`).
 
 ### Option B: explicit window
 

@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+
+# This script relies on bash features (arrays, [[ ]], pipefail).
+# If you run it via `sh ./collect-incident.sh ...` on Ubuntu, it will use dash and fail.
+if [ -z "${BASH_VERSION:-}" ]; then
+  echo "Error: this script must be run with bash (not sh)." >&2
+  echo "Run: ./collect-incident.sh ..." >&2
+  echo "Or:  bash ./collect-incident.sh ..." >&2
+  exit 2
+fi
+
 set -euo pipefail
 
 usage() {
@@ -36,6 +46,25 @@ out_dir=""
 out_user_set="0"
 include_gz="0"
 
+normalize_duration_for_date() {
+  # Accept compact forms like 30m / 2h / 7d / 15s / 1w and convert to something GNU date parses.
+  local raw="${1:-}"
+  if [[ "$raw" =~ ^([0-9]+)([smhdw])$ ]]; then
+    local amount="${BASH_REMATCH[1]}"
+    local unit="${BASH_REMATCH[2]}"
+    case "$unit" in
+      s) printf '%s seconds' "$amount" ;;
+      m) printf '%s minutes' "$amount" ;;
+      h) printf '%s hours' "$amount" ;;
+      d) printf '%s days' "$amount" ;;
+      w) printf '%s weeks' "$amount" ;;
+      *) printf '%s' "$raw" ;;
+    esac
+    return 0
+  fi
+  printf '%s' "$raw"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --center) center="${2:-}"; shift 2 ;;
@@ -63,9 +92,12 @@ if [[ -z "$since" || -z "$until" ]]; then
     exit 2
   fi
 
-  # Use TZ=UTC so the arithmetic is deterministic.
-  since="$(TZ=UTC date -d "$center - $before" '+%F %T UTC')"
-  until="$(TZ=UTC date -d "$center + $after" '+%F %T UTC')"
+  before_expr="$(normalize_duration_for_date "$before")"
+  after_expr="$(normalize_duration_for_date "$after")"
+
+  # Use `-u` so arithmetic/output is deterministic.
+  since="$(date -u -d "$center - $before_expr" '+%F %T UTC')"
+  until="$(date -u -d "$center + $after_expr" '+%F %T UTC')"
 fi
 
 tmp="$(mktemp -d)"
